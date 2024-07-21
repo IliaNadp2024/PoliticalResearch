@@ -13,8 +13,7 @@ library(forcats)
 
 x1 <- c("Dec", "Apr", "Jan", "Mar") #это не обладает фиксированной последовательностью 
 
-month_levels <- c(
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+month_levels <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 
