@@ -1,0 +1,135 @@
+---
+title: "Factors & dates"
+output: html_document
+date: "2024-07-20"
+---
+
+```{r}
+
+library(tidyverse)
+library(forcats)
+
+#создание фактора 
+
+x1 <- c("Dec", "Apr", "Jan", "Mar") #это не обладает фиксированной последовательностью 
+
+month_levels <- c(
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+y1 <- factor(x1, levels = month_levels) #это обладает 
+
+sort(y1)
+
+#Sometimes you’d prefer that the order of the levels match the order of the first appearance in the data
+
+f1 <- factor(x1, levels = unique(x1)) 
+
+f1
+
+#альтернатива 
+
+f2 <- x1 %>% factor() %>% 
+  fct_inorder()
+
+f2
+
+forcats::gss_cat
+
+   gss_cat %>%
+      count(race)
+   
+     ggplot(gss_cat, aes(race)) +
+      geom_bar()
+     
+#By default, ggplot2 will drop levels that don’t have any values. You can force them to display with
+     
+ggplot(gss_cat, aes(race)) + 
+  geom_bar() + 
+  scale_x_discrete(drop = FALSE)
+
+  relig <- gss_cat %>%
+      group_by(relig) %>%
+      summarize(
+age = mean(age, na.rm = TRUE),
+tvhours = mean(tvhours, na.rm = TRUE), n = n()
+      )
+  
+  ggplot(relig, aes(tvhours, relig)) + 
+        geom_point()
+  
+  #It is difficult to interpret this plot because there’s no overall pattern. We can improve it by reordering the levels of relig using fct_reor der(). fct_reorder() takes three arguments:f, the factor whose levels you want to modify. / x, a numeric vector that you want to use to reorder the levels.
+  
+ ggplot(relig, aes(tvhours, fct_reorder(relig, tvhours))) +
+      geom_point()
+ 
+ #лучше перенести в отдельный мьютэейт
+
+   relig %>%
+      mutate(relig = fct_reorder(relig, tvhours)) %>%
+      ggplot(aes(tvhours, relig)) +
+geom_point()
+   
+   #То же самое, но с группами по доходам и возрастом 
+   
+   rincome <- gss_cat %>%
+      group_by(rincome) %>%
+      summarize(
+age = mean(age, na.rm = TRUE),
+tvhours = mean(tvhours, na.rm = TRUE), n = n()
+)
+
+    ggplot(
+      rincome,
+      aes(age, fct_reorder(rincome, age))
+    ) + 
+      geom_point()
+    
+    
+
+```
+
+
+
+```{r}
+#Modifing factor levels
+
+#More powerful than changing the orders of the levels is changing their values. 
+
+gss_cat %>% count(partyid)
+
+#fct_recode
+
+gss_cat %>%
+      mutate(partyid = fct_recode(partyid,
+        "Republican, strong"    = "Strong republican",
+        "Republican, weak"      = "Not str republican",
+        "Independent, near rep" = "Ind,near rep",
+        "Independent, near dem" = "Ind,near dem")) %>%
+  count(partyid)
+
+#To combine groups, you can assign multiple old levels to the same new level
+
+#If you want to collapse a lot of levels, fct_collapse() is a useful variant of fct_recode(). For each new variable, you can provide a vector of old levels:
+
+ gss_cat %>%
+      mutate(partyid = fct_collapse(partyid,
+        other = c("No answer", "Don't know", "Other party"),
+        rep = c("Strong republican", "Not str republican"),
+        ind = c("Ind,near rep", "Independent", "Ind,near dem"),
+        dem = c("Not str democrat", "Strong democrat")
+  )) %>%
+count(partyid)
+
+#Sometimes you just want to lump together all the small groups to make a plot or table simpler.
+ 
+ gss_cat %>%
+      mutate(relig = fct_lump(relig)) %>%
+      count(relig)
+
+```
+
+```{r}
+
+```
