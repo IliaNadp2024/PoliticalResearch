@@ -1,0 +1,279 @@
+---
+title: "Ggplot basics"
+output: html_document
+date: "2024-07-10"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+
+```{r}
+summary(mpg)
+
+#Помимо color, можно использовать shape, alpha, size.
+
+ggplot(data = mpg)+
+  geom_point(aes(displ,hwy, color = class))
+
+#Несколько графиков по катеориям - faset_wrap(~smth)
+
+    ggplot(data = mpg) +
+          geom_point(mapping = aes(x = displ, y = hwy)) +
+          facet_wrap(~drv)
+  
+#linetype в smooth-Line
+    ggplot(data = mpg) +
+          geom_smooth(aes(displ, hwy, linetype = drv)) 
+    
+#Демонстрация того, что aes можно задать для всех графиков + subset, где class - одна из переменных
+    ggplot(data = mpg, aes(displ, hwy)) +
+      geom_point(aes(color = class)) +
+      geom_smooth(
+        data = filter(mpg, class == "subcompact"),
+se = FALSE )
+    
+#Cheat sheet: https://rstudio.github.io/cheatsheets/html/data-visualization.html#geoms 
+    
+#Barplot 
+    
+ ggplot(data = diamonds) +
+      geom_bar(aes(cut))
+ 
+#geom_bar and stat_count are interchangeable 
+ 
+  ggplot(data = diamonds) +
+      stat_count(aes(cut))
+  
+  #Within geom_bar use fill instead of color
+  
+f1 <-  ggplot(data = diamonds) +
+      geom_bar(mapping = aes(x = cut, color = cut))
+f2 <-     ggplot(data = diamonds) +
+      geom_bar(mapping = aes(x = cut, fill = cut))
+
+#Way to unite two plots
+
+install.packages("ggpubr")
+library(ggpubr)
+
+ggarrange(f1, f2, ncol = 2, legend = "none")
+
+#If we want to use filling with another one variable 
+
+    ggplot(data = diamonds) +
+      geom_bar(mapping = aes(x = cut, fill = clarity))
+    
+#Working with the positions of the bars. "identity", "dodge" or "fill". Identity by default. Визуальный формат баров 
+    
+ggplot(data = diamonds, aes(cut, fill = clarity))+
+geom_bar(alpha = 1/5, position = "fill")
+
+#Визуализация может быть изменена и для скаттерплота. Jitter adds some random noise
+
+ggplot(data = mpg) +
+      geom_point(aes(displ, hwy),
+        position = "jitter"
+      )
+
+#Working with coordinates. coord_flip() switches the x- and y-axes.
+
+ ggplot(data = mpg, mapping = aes(x = class, y = hwy)) +
+          geom_boxplot() +
+          coord_flip()
+
+
+
+```
+
+
+```{r}
+
+#Data Transformation with dplyr
+
+?seq()
+
+seq(2,20, length.out = 5)
+
+install.packages("nycflights13")
+library(nycflights13)
+library(tidyverse)
+
+flights <- nycflights13::flights
+
+#int stands for integers. dbl stands for doubles, or real numbers. chr stands for character vectors, or strings. dttm stands for date-times (a date + a time)Y. lgl stands for logical, vectors that contain only TRUE or FALSE.fctr stands for factors, which R uses to represent categorical variables with fixed possible values.date stands for dates.
+
+#Filter 
+
+jan1 <- flights %>% 
+  filter(day == 1, month == 1)
+
+flights %>% 
+  filter(day == 1 | month == 1)
+
+#Alternative
+
+filter(flights, day == 1 | month == 1)
+
+filter(flights, !(arr_delay > 120 | dep_delay > 120))
+filter(flights, arr_delay <= 120, dep_delay <= 120)
+
+# %in% operator. Позволяет задавать условие на несколько чисел. То же самое, что "или", но меньше писать 
+
+flights %>% 
+  filter(month %in% c(11,12)) 
+
+flights %>% 
+  filter(month == 11 | month == 12) 
+
+#Working with missing values (NAs)
+
+data1 <- tibble(x = c(1,2, NA))
+
+data1 %>% 
+  filter(is.na(x) | x >1)
+
+#ARRANGE (descending, ascending order)
+
+flights %>% 
+  arrange(year, month, day)
+
+flights %>% 
+  arrange(desc(arr_delay))
+
+#SELECT
+
+flights %>% 
+  select(year, month,day)
+
+flights %>% 
+  select(year:day)
+
+flights %>% 
+  select(-(year:day))
+
+#Select functions: starts_with("abc"), ends_with("xyz"), contains("ijk") 
+
+#rename(new_name = old_name)
+
+#MUTATE 
+
+flights %>% 
+  select(year:day,
+ ends_with("delay"),
+ distance,
+ air_time) %>% 
+  mutate(gain = arr_delay - dep_delay,
+ speed = distance / air_time * 60)
+
+#If I only want to keep the new columns, I can use transmute
+
+#Summarize: na.rm = TRUE позволяет игнорировать NA (удалить их из датасета)
+
+flights %>% 
+  summarize(mean(dep_delay, na.rm = TRUE))
+
+flights %>% 
+  summarize(mean(dep_delay))
+
+flights %>% 
+  group_by(year, month, day) %>% 
+  summarize(AverageDistance = mean(distance))
+
+#n() позволяет посчитать всякое говно. Просто variable = n(). Полезно вместе с group_by
+
+flights <- flights %>% 
+  group_by(dest) %>% 
+  summarise(count = n(), dist = mean(distance, na.rm = TRUE),
+ delay = mean(arr_delay, na.rm = TRUE)) %>% 
+  filter(count > 20, dest != "NHL")
+
+#We can vizualize 
+
+ggplot(data = flights, aes(dist, delay))+
+  geom_point(aes(size = count), alpha = 0.25)+
+  geom_smooth(se = FALSE)
+
+#COUNTS
+
+#комбинирование обработки данных и визуализации 
+
+install.packages("Lahman")
+library(Lahman)
+
+batting <- as_tibble(Lahman::Batting)
+
+batters <- batting %>%
+ group_by(playerID) %>%
+ summarize(
+ ba = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+ ab = sum(AB, na.rm = TRUE)
+ )
+
+batters %>%
+ filter(ab > 100) %>%
+ ggplot(mapping = aes(x = ab, y = ba)) +
+ geom_point() +
+ geom_smooth(se = FALSE)
+
+#SUMMARY FUNCTIONS: mean, median, sd, IQR (interquartile range), min(), max(), first(),last(). The code is not working, there is no object with such parameters
+
+flights %>% 
+ group_by(year, month, day) %>%
+ summarize(
+ first_dep = first(dep_time),
+ last_dep = last(dep_time, na_rm = TRUE)
+ )
+
+#COUNTS. Which destinations have the most carriers? n_distinct() - количество уникальных значений
+
+flights %>% 
+  group_by(dest) %>% 
+  summarize(carriers = n_distinct(carrier)) %>%
+  arrange(desc(carriers))
+
+flights %>% 
+  count(dest)
+
+#GROUPED MUTATES!
+
+ not_cancelled <- flights %>%
+      filter(!is.na(dep_delay), !is.na(arr_delay))
+ 
+ #Здесь можно найти минимальное и максимальное значение 
+ 
+ not_cancelled %>%
+          group_by(year, month, day) %>%
+          summarize(
+            first = min(dep_time),
+            last = max(dep_time)
+          )
+
+  not_cancelled %>%
+          group_by(year, month, day) %>%
+          summarize(
+            first_dep = first(dep_time),
+            last_dep = last(dep_time)
+          )
+  
+# Which destinations have the most carriers? n_distinct - позволяет определить количество уникальных входов в датасете. Count - простой подсчет 
+  
+   not_cancelled %>%
+      group_by(dest) %>%
+      summarize(carriers = n_distinct(carrier)) %>%
+      arrange(desc(carriers))
+   
+   not_cancelled %>%
+      count(dest)
+   
+   
+
+```
+
+
+```{r}
+
+
+```
+
